@@ -54,7 +54,7 @@ export default function MoodReport() {
   }, []);
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 40 }}>
       <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 16 }}>
         Laporan Mood Bulanan
       </Text>

@@ -1,7 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function Profile() {
   const [user, setUser] = useState<any>(null);
@@ -20,6 +27,18 @@ export default function Profile() {
   const handleLogout = async () => {
     await AsyncStorage.multiRemove(["token", "user"]);
     router.replace("/(auth)/login");
+  };
+
+  const confirmLogout = () => {
+    Alert.alert(
+      "Konfirmasi Logout",
+      "Apakah Anda yakin ingin logout?",
+      [
+        { text: "Batal", style: "cancel" },
+        { text: "Ya, Logout", style: "destructive", onPress: handleLogout },
+      ],
+      { cancelable: true }
+    );
   };
 
   useEffect(() => {
@@ -64,7 +83,7 @@ export default function Profile() {
       </View>
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </View>
@@ -81,7 +100,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F7FA",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 40,
   },
   header: {
     alignItems: "center",

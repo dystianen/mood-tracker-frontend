@@ -106,7 +106,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 25, paddingTop: 50 },
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 40 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 26, fontWeight: "bold", marginBottom: 20 },
   card: {

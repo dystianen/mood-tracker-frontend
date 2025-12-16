@@ -4,7 +4,16 @@ import "react-native-reanimated";
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#4f46e5",
+        tabBarInactiveTintColor: "#9ca3af",
+        tabBarStyle: {
+          borderTopColor: "#e5e7eb",
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{

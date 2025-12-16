@@ -1,22 +1,64 @@
+import Recommendation from "@/components/Recommendation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { getTodayMood } from "../../api/moodApi";
+import { getRecommendation, getTodayMood } from "../../api/moodApi";
+
+type MoodType =
+  | "Sangat Senang"
+  | "Senang"
+  | "Biasa Saja"
+  | "Sedih"
+  | "Sangat Sedih";
+
+const moodEmoji: Record<MoodType, string> = {
+  "Sangat Senang": "😄",
+  Senang: "🙂",
+  "Biasa Saja": "😐",
+  Sedih: "😔",
+  "Sangat Sedih": "😢",
+};
+interface TodayMood {
+  mood: MoodType;
+  color: string;
+  date: string;
+  note?: string;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
-  const [todayMood, setTodayMood] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [todayMood, setTodayMood] = useState<TodayMood | null>(null);
+  const [loadingTodayMood, setLoadingTodayMood] = useState(false);
+  const [recommendation, setRecommendation] = useState<any>(null);
+  const [loadingRecommendation, setLoadingRecommendation] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await Promise.all([
+        loadUser(),
+        loadTodayMood(),
+        loadRecommendationMood(),
+      ]);
+    } catch (err) {
+      console.log("Refresh error:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const loadUser = async () => {
     const userData = await AsyncStorage.getItem("user");
@@ -25,36 +67,76 @@ export default function HomeScreen() {
 
   const loadTodayMood = async () => {
     try {
+      setLoadingTodayMood(true);
       const res = await getTodayMood();
       setTodayMood(res || null);
     } catch (err) {
       console.log("Error load today mood:", err);
     } finally {
-      setLoading(false);
+      setLoadingTodayMood(false);
+    }
+  };
+
+  const loadRecommendationMood = async () => {
+    try {
+      const month = dayjs().month() + 1;
+      const year = dayjs().year();
+      setLoadingRecommendation(true);
+      const res = await getRecommendation(month, year);
+      setRecommendation(res);
+      setLoadingRecommendation(false);
+    } catch (err) {
+      console.log("Error load today mood:", err);
+      setLoadingRecommendation(false);
+    } finally {
+      setLoadingRecommendation(false);
     }
   };
 
   useEffect(() => {
     loadUser();
     loadTodayMood();
+    loadRecommendationMood();
   }, []);
 
-  if (loading) {
+  const EmptyRecommendation = () => {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={styles.emptyCard}>
+        <Text style={styles.emptyTitle}>Rekomendasi</Text>
+        <Text style={styles.emptyDescription}>
+          Belum ada rekomendasi untuk periode ini. Isi mood kamu secara rutin
+          agar kami bisa memberikan saran yang lebih relevan ✨
+        </Text>
       </View>
     );
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Halo, {user?.name || "User"}</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#6366F1"]}
+          tintColor="#6366F1"
+        />
+      }
+    >
+      <Text style={styles.title}>Halo, {user?.name || "User"} 👋</Text>
+      <Text style={styles.subtitle}>Semoga harimu menyenangkan</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Mood Hari Ini</Text>
 
-        {todayMood ? (
+        {loadingTodayMood ? (
+          <View style={styles.moodLoadingCard}>
+            <ActivityIndicator size="small" color="#6366F1" />
+            <Text style={styles.loadingText}>Memuat mood hari ini...</Text>
+          </View>
+        ) : todayMood ? (
           <View style={styles.moodCard}>
             <View style={styles.moodHeader}>
               <View
@@ -64,89 +146,113 @@ export default function HomeScreen() {
                 ]}
               />
               <View>
-                <Text style={styles.moodLabel}>{todayMood.mood}</Text>
+                <Text style={styles.moodLabel}>
+                  {todayMood.mood} {moodEmoji[todayMood.mood]}
+                </Text>
                 <Text style={styles.moodDate}>
                   {dayjs(todayMood.date).format("DD MMM YYYY")}
                 </Text>
               </View>
             </View>
 
+            <View style={styles.divider} />
+
             {todayMood.note ? (
               <>
-                <View style={styles.divider} />
-                <Text style={styles.noteLabel}>Catatan:</Text>
-                <Text style={styles.noteText}>{todayMood.note}</Text>
+                <Text style={styles.noteLabel}>Catatan</Text>
+                <Text style={styles.noteText}>“{todayMood.note}”</Text>
               </>
             ) : (
-              <>
-                <View style={styles.divider} />
-                <Text style={{ color: "#6b728080", fontStyle: "italic" }}>
-                  Tidak ada catatan hari ini
-                </Text>
-              </>
+              <Text style={styles.emptyNote}>Tidak ada catatan hari ini</Text>
             )}
           </View>
         ) : (
-          <Text style={{ color: "#6b7280" }}>
-            Kamu belum mengisi mood hari ini
-          </Text>
+          <Text style={styles.emptyText}>Kamu belum mengisi mood hari ini</Text>
         )}
       </View>
 
       <TouchableOpacity
         style={styles.button}
         onPress={() => router.push("/mood/edit")}
+        activeOpacity={0.85}
       >
         <Text style={styles.buttonText}>
           {todayMood ? "Ubah Mood Hari Ini" : "Isi Mood Hari Ini"}
         </Text>
       </TouchableOpacity>
-    </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          Rekomendasi Berdasarkan Mood Bulan Ini
+        </Text>
+
+        {loadingRecommendation ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="small" color="#6366F1" />
+            <Text style={styles.loadingText}>Memuat rekomendasi...</Text>
+          </View>
+        ) : recommendation ? (
+          <Recommendation data={recommendation} />
+        ) : (
+          <EmptyRecommendation />
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20, paddingTop: 40 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 26, fontWeight: "bold", marginBottom: 20 },
-  card: {
-    backgroundColor: "#f9fafb",
-    padding: 20,
-    borderRadius: 12,
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    backgroundColor: "#F5F7FA",
+  },
+
+  contentContainer: {
+    paddingBottom: 24,
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "800",
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginTop: 4,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
-  cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  moodWrapper: { flexDirection: "row", alignItems: "center", gap: 10 },
-  moodColor: {
-    width: 20,
-    height: 20,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
+
+  card: {
+    backgroundColor: "#ffffff",
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
-  moodText: { fontSize: 16 },
-  button: {
-    backgroundColor: "#3B82F6",
-    padding: 16,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  buttonText: { color: "white", textAlign: "center", fontSize: 16 },
-  secondaryButton: {
-    backgroundColor: "#E5E7EB",
-  },
-  secondaryText: {
-    textAlign: "center",
-    fontSize: 16,
-    color: "#374151",
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 14,
   },
 
   moodCard: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: "#f9fafb",
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
@@ -154,20 +260,17 @@ const styles = StyleSheet.create({
   moodHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
     gap: 15,
   },
 
   moodCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 40,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
+    width: 42,
+    height: 42,
+    borderRadius: 50,
   },
 
   moodLabel: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
   },
 
@@ -180,18 +283,108 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: "#e5e7eb",
-    marginVertical: 10,
+    marginVertical: 14,
   },
 
   noteLabel: {
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 4,
+    color: "#374151",
   },
 
   noteText: {
     fontSize: 14,
     color: "#374151",
+    fontStyle: "italic",
     lineHeight: 20,
+  },
+
+  emptyNote: {
+    fontSize: 14,
+    fontStyle: "italic",
+    color: "#9ca3af",
+  },
+
+  emptyText: {
+    color: "#6b7280",
+    fontStyle: "italic",
+  },
+
+  button: {
+    backgroundColor: "#4f46e5",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 10,
+    shadowColor: "#4f46e5",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  buttonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  section: {
+    marginTop: 24,
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    height: 150,
+    elevation: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  emptyDescription: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  moodLoadingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    height: 150,
+  },
+
+  // Loading Recommendation
+  loadingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    height: 150,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  loadingText: {
+    marginTop: 8,
+    color: "#64748B",
   },
 });

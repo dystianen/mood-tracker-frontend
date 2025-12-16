@@ -210,8 +210,8 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   selectedColor: {
-    borderColor: "#000",
-    borderWidth: 3,
+    borderColor: "#4f46e5",
+    borderWidth: 2,
   },
 
   /* INFO / PENJELASAN */
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   /* BUTTON */
   btnSubmit: {
     marginTop: 20,
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#4f46e5",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",

@@ -30,3 +30,14 @@ export const getMonthlyMood = async (month: number, year: number) => {
 
   return res.data;
 };
+
+export const getRecommendation = async (month: number, year: number) => {
+  const res = await axios.get("/mood/recommendation", {
+    params: {
+      month,
+      year,
+    },
+  });
+
+  return res.data;
+};

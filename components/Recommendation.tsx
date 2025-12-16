@@ -8,6 +8,12 @@ type TRecommendation = {
   recommendation: string;
 };
 
+const LEVEL_LABEL: Record<string, string> = {
+  good: "Cukup Stabil 😊",
+  neutral: "Naik Turun 😐",
+  bad: "Perlu Perhatian 💛",
+};
+
 const Recommendation = ({ data }: { data: TRecommendation }) => {
   return (
     <View
@@ -36,7 +42,7 @@ const Recommendation = ({ data }: { data: TRecommendation }) => {
       </Text>
 
       <Text style={{ fontSize: 14, color: "#334155" }}>
-        Level Mood: {data.level}
+        Kondisi Bulan Ini: {LEVEL_LABEL[data.level]}
       </Text>
       <Text style={{ fontSize: 14, color: "#334155" }}>
         Rata-rata Mood: {data.average_mood}/5

@@ -1,6 +1,6 @@
 import { getMonthlyMood, getRecommendation } from "@/api/moodApi";
 import Recommendation from "@/components/Recommendation";
-import MOOD_VALUE from "@/constants/moodValue";
+import { MOOD_VALUE, VALUE_TO_MOOD } from "@/constants/moodValue";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -242,6 +242,7 @@ export default function MoodReport() {
         )}
 
         {/* Chart */}
+        <Text style={styles.sectionTitleChart}>Grafik Mood Harian</Text>
         <View style={styles.chartWrapper}>
           {loading ? (
             <View style={styles.chartLoading}>
@@ -279,9 +280,7 @@ export default function MoodReport() {
                   pointerLabelWidth: 100,
                   pointerLabelHeight: 80,
                   pointerLabelComponent: (item: any) => {
-                    const moodName = Object.keys(MOOD_VALUE).find(
-                      (key) => MOOD_VALUE[key] === item.value
-                    );
+                    const moodName = VALUE_TO_MOOD[Number(item[0].value)];
 
                     return (
                       <View
@@ -289,14 +288,15 @@ export default function MoodReport() {
                           backgroundColor: "white",
                           padding: 8,
                           borderRadius: 8,
-                          elevation: 4,
+                          elevation: 2,
+                          width: 120,
                         }}
                       >
                         <Text style={{ fontWeight: "bold", fontSize: 14 }}>
                           {moodName}
                         </Text>
                         <Text style={{ fontSize: 12 }}>
-                          Tanggal {item.label}
+                          Tanggal {item[0].label}
                         </Text>
                       </View>
                     );
@@ -550,11 +550,17 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
 
+  sectionTitleChart: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 14,
+  },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginVertical: 14,
-    marginTop: 70,
+    marginTop: 60,
   },
 
   detailLoading: {

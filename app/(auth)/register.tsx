@@ -110,11 +110,12 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         {/* Login link */}
-        <Link href="/(auth)/login">
-          <Text style={styles.link}>
-            Sudah punya akun? <Text style={styles.linkBold}>Login</Text>
-          </Text>
-        </Link>
+        <Text style={styles.link}>
+          Sudah punya akun?{" "}
+          <Link href="/(auth)/login">
+            <Text style={styles.linkBold}>Login</Text>
+          </Link>
+        </Text>
       </View>
     </LinearGradient>
   );

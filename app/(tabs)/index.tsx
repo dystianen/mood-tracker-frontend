@@ -192,7 +192,7 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Saran untuk Kamu Bulan Ini</Text>
+        <Text style={styles.sectionTitle}>Saran Untuk Kamu Bulan Ini</Text>
 
         {loadingRecommendation ? (
           <View style={styles.loadingCard}>

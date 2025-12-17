@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Text, View } from "react-native";
 
 type TRecommendation = {
@@ -9,12 +9,16 @@ type TRecommendation = {
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  good: "Cukup Stabil 😊",
-  neutral: "Naik Turun 😐",
-  bad: "Perlu Perhatian 💛",
+  good: "Lagi Dalam Kondisi Baik 🌱",
+  neutral: "Perlu Menjaga Keseimbangan 🌤️",
+  bad: "Butuh Dukungan Lebih 💛",
 };
 
-const Recommendation = ({ data }: { data: TRecommendation }) => {
+const Recommendation = memo(function Recommendation({
+  data,
+}: {
+  data: TRecommendation;
+}) {
   return (
     <View
       style={{
@@ -61,6 +65,6 @@ const Recommendation = ({ data }: { data: TRecommendation }) => {
       </Text>
     </View>
   );
-};
+});
 
 export default Recommendation;

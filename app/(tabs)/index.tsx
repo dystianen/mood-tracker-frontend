@@ -45,21 +45,6 @@ export default function HomeScreen() {
   const [loadingRecommendation, setLoadingRecommendation] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = async () => {
-    try {
-      setRefreshing(true);
-      await Promise.all([
-        loadUser(),
-        loadTodayMood(true),
-        loadRecommendationMood(true),
-      ]);
-    } catch (err) {
-      console.log("Refresh error:", err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   const loadUser = async () => {
     const userData = await AsyncStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
@@ -67,39 +52,46 @@ export default function HomeScreen() {
 
   const loadTodayMood = async (isRefresh = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
+      if (!isRefresh) {
         setLoadingTodayMood(true);
       }
-
       const res = await getTodayMood();
       setTodayMood(res || null);
     } catch (err) {
       console.log("Error load today mood:", err);
     } finally {
-      setLoadingTodayMood(false);
+      if (!isRefresh) {
+        setLoadingTodayMood(false);
+      }
     }
   };
 
   const loadRecommendationMood = async (isRefresh = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
+      if (!isRefresh) {
         setLoadingRecommendation(true);
       }
-
       const month = dayjs().month() + 1;
       const year = dayjs().year();
       const res = await getRecommendation(month, year);
       setRecommendation(res);
-      setLoadingRecommendation(false);
     } catch (err) {
-      console.log("Error load today mood:", err);
-      setLoadingRecommendation(false);
+      console.log("Error load recommendation:", err);
     } finally {
-      setLoadingRecommendation(false);
+      if (!isRefresh) {
+        setLoadingRecommendation(false);
+      }
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await Promise.all([loadTodayMood(true), loadRecommendationMood(true)]);
+    } catch (err) {
+      console.log("Refresh error:", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 

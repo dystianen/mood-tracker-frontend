@@ -50,8 +50,8 @@ export default function HomeScreen() {
       setRefreshing(true);
       await Promise.all([
         loadUser(),
-        loadTodayMood(),
-        loadRecommendationMood(),
+        loadTodayMood(true),
+        loadRecommendationMood(true),
       ]);
     } catch (err) {
       console.log("Refresh error:", err);
@@ -65,9 +65,14 @@ export default function HomeScreen() {
     if (userData) setUser(JSON.parse(userData));
   };
 
-  const loadTodayMood = async () => {
+  const loadTodayMood = async (isRefresh = false) => {
     try {
-      setLoadingTodayMood(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoadingTodayMood(true);
+      }
+
       const res = await getTodayMood();
       setTodayMood(res || null);
     } catch (err) {
@@ -77,11 +82,16 @@ export default function HomeScreen() {
     }
   };
 
-  const loadRecommendationMood = async () => {
+  const loadRecommendationMood = async (isRefresh = false) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoadingRecommendation(true);
+      }
+
       const month = dayjs().month() + 1;
       const year = dayjs().year();
-      setLoadingRecommendation(true);
       const res = await getRecommendation(month, year);
       setRecommendation(res);
       setLoadingRecommendation(false);

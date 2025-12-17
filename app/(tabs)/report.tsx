@@ -2,10 +2,15 @@ import { getMonthlyMood, getRecommendation } from "@/api/moodApi";
 import Recommendation from "@/components/Recommendation";
 import { MOOD_VALUE, VALUE_TO_MOOD } from "@/constants/moodValue";
 import dayjs from "dayjs";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,8 +19,6 @@ import {
   View,
 } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
-
-const WIDTH = Dimensions.get("window").width - 32;
 
 const MONTHS = [
   "Jan",
@@ -34,7 +37,7 @@ const MONTHS = [
 
 export default function MoodReport() {
   const [chartData, setChartData] = useState<any>([]);
-  const [raw, setRaw] = useState([]);
+  const [raw, setRaw] = useState<any>([]);
   const [month, setMonth] = useState(dayjs().month() + 1);
   const [year, setYear] = useState(dayjs().year());
   const [loading, setLoading] = useState(false);
@@ -44,15 +47,26 @@ export default function MoodReport() {
   const scrollRef = useRef<ScrollView>(null);
   const itemRefs = useRef<View[]>([]);
 
+  const generateColor = useMemo(
+    () => (val: number) => {
+      if (val === 5) return "#4CAF50";
+      if (val === 4) return "#8BC34A";
+      if (val === 3) return "#FFC107";
+      if (val === 2) return "#FF9800";
+      return "#F44336";
+    },
+    []
+  );
+
   const loadRecommendationMood = useCallback(
-    async (m = month, y = year, isRefresh = false) => {
+    async (isRefresh = false) => {
       if (isRefresh) {
         setRefreshing(true);
       } else {
         setLoadingRecommendation(true);
       }
 
-      const recommendation = await getRecommendation(m, y);
+      const recommendation = await getRecommendation(month, year);
       setRecommendation(recommendation);
       setLoadingRecommendation(false);
     },
@@ -60,7 +74,7 @@ export default function MoodReport() {
   );
 
   const load = useCallback(
-    async (m = month, y = year, isRefresh = false) => {
+    async (isRefresh = false) => {
       try {
         if (isRefresh) {
           setRefreshing(true);
@@ -68,45 +82,51 @@ export default function MoodReport() {
           setLoading(true);
         }
 
-        const data = await getMonthlyMood(m, y);
+        const data = await getMonthlyMood(month, year);
 
-        const generateColor = (val: number) => {
-          if (val === 5) return "#4CAF50";
-          if (val === 4) return "#8BC34A";
-          if (val === 3) return "#FFC107";
-          if (val === 2) return "#FF9800";
-          return "#F44336";
-        };
+        if (!data || !Array.isArray(data)) {
+          setChartData([]);
+          setRaw([]);
+          return;
+        }
 
-        const mapped = [...data]
-          .sort(
-            (a: any, b: any) =>
-              dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
-          )
-          .map((i: any) => {
-            const value = MOOD_VALUE[i.mood];
-            return {
-              value,
-              label: dayjs(i.date).format("DD"),
-              dataPointColor: generateColor(value),
-            };
-          });
-
-        setChartData(mapped);
         setRaw(data);
+
+        setTimeout(() => {
+          try {
+            const mapped = data
+              .filter((i) => i && i.date && i.mood !== undefined) // Filter dulu
+              .sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
+              .map((i) => {
+                const value = MOOD_VALUE[i.mood] ?? 0;
+                return {
+                  value,
+                  label: dayjs(i.date).format("DD"),
+                  dataPointColor: generateColor(value),
+                };
+              });
+
+            setChartData(mapped);
+          } catch (err) {
+            console.log("Mapping error:", err);
+            setChartData([]);
+          }
+        }, 0);
       } catch (e) {
-        console.log(e);
+        console.log("Load monthly mood error:", e);
+        setChartData([]);
+        setRaw([]);
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [month, year]
+    [generateColor, month, year]
   );
 
   useEffect(() => {
-    load(month, year);
-    loadRecommendationMood(month, year);
+    load();
+    loadRecommendationMood();
   }, [load, loadRecommendationMood, month, year]);
 
   useEffect(() => {
@@ -222,8 +242,8 @@ export default function MoodReport() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => {
-              load(month, year, true);
-              loadRecommendationMood(month, year, true);
+              load(true);
+              loadRecommendationMood(true);
             }}
             colors={["#6366F1"]}
             tintColor="#6366F1"
@@ -251,58 +271,68 @@ export default function MoodReport() {
             </View>
           ) : chartData.length > 0 ? (
             <View style={styles.chartCard}>
-              <LineChart
-                data={chartData}
-                curved
-                width={WIDTH}
-                height={260}
-                thickness={4}
-                color="#6366F1"
-                hideRules={false}
-                hideYAxisText
-                yAxisTextStyle={{ color: "#999" }}
-                xAxisThickness={1}
-                yAxisThickness={1}
-                startFillColor="#a5b4fc"
-                endFillColor="#eef2ff"
-                startOpacity={0.4}
-                endOpacity={0.01}
-                initialSpacing={20}
-                dataPointsHeight={14}
-                dataPointsWidth={14}
-                dataPointsColor="#6366F1"
-                isAnimated
-                animationDuration={800}
-                pointerConfig={{
-                  pointerColor: "#4F46E5",
-                  pointerStripColor: "#4F46E5",
-                  pointerStripHeight: 200,
-                  pointerLabelWidth: 100,
-                  pointerLabelHeight: 80,
-                  pointerLabelComponent: (item: any) => {
-                    const moodName = VALUE_TO_MOOD[Number(item[0].value)];
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ height: 300 }}
+                contentContainerStyle={{ paddingBottom: 32 }}
+              >
+                <LineChart
+                  areaChart
+                  data={chartData}
+                  curved
+                  width={chartData.length * 49}
+                  height={260}
+                  maxValue={5}
+                  noOfSections={5}
+                  thickness={2}
+                  color="#6366F1"
+                  hideRules={false}
+                  hideYAxisText
+                  yAxisTextStyle={{ color: "#999" }}
+                  xAxisThickness={1}
+                  yAxisThickness={1}
+                  startFillColor="#a5b4fc"
+                  endFillColor="#eef2ff"
+                  startOpacity={0.4}
+                  endOpacity={0.01}
+                  initialSpacing={8}
+                  dataPointsHeight={14}
+                  dataPointsWidth={1}
+                  dataPointsColor="#6366F1"
+                  isAnimated
+                  animationDuration={800}
+                  pointerConfig={{
+                    pointerColor: "#4F46E5",
+                    pointerStripColor: "#4F46E5",
+                    pointerStripHeight: 200,
+                    pointerLabelWidth: 100,
+                    pointerLabelHeight: 80,
+                    pointerLabelComponent: (item: any) => {
+                      const moodName = VALUE_TO_MOOD[Number(item[0].value)];
 
-                    return (
-                      <View
-                        style={{
-                          backgroundColor: "white",
-                          padding: 8,
-                          borderRadius: 8,
-                          elevation: 2,
-                          width: 120,
-                        }}
-                      >
-                        <Text style={{ fontWeight: "bold", fontSize: 14 }}>
-                          {moodName}
-                        </Text>
-                        <Text style={{ fontSize: 12 }}>
-                          Tanggal {item[0].label}
-                        </Text>
-                      </View>
-                    );
-                  },
-                }}
-              />
+                      return (
+                        <View
+                          style={{
+                            backgroundColor: "white",
+                            padding: 8,
+                            borderRadius: 8,
+                            elevation: 2,
+                            width: 120,
+                          }}
+                        >
+                          <Text style={{ fontWeight: "bold", fontSize: 14 }}>
+                            {moodName}
+                          </Text>
+                          <Text style={{ fontSize: 12 }}>
+                            Tanggal {item[0].label}
+                          </Text>
+                        </View>
+                      );
+                    },
+                  }}
+                />
+              </ScrollView>
             </View>
           ) : (
             <EmptyChart month={month} year={year} />
@@ -492,7 +522,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     elevation: 1,
-    overflow: "hidden",
+    // overflow: "hidden",
   },
 
   chartLoading: {
